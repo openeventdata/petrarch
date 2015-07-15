@@ -54,7 +54,6 @@ import PETRglobals  # global variables
 import PETRreader  # input routines
 import PETRwriter
 import utilities
-import PETRtree
 
 # ================================  PARSER/CODER GLOBALS  ================== #
 
@@ -144,23 +143,6 @@ class CheckVerbsError(Exception):
     pass
 
 # ================== ERROR FUNCTIONS ================== #
-
-"""
-<14.09.014> This function has now been replaced by more specific error messages and
-it should be possible to eliminate it
-def raise_parsing_error(call_location_string):
-# <14.02.27: this is currently used as a generic escape from misbehaving
-# functions, so it is not necessarily an actual unbalanced tree, just that
-# we've hit something unexpected.
-    global SentenceID
-    logger = logging.getLogger('petr_log')
-    errorstring = 'Parsing error in ' + call_location_string
-    logger.warning('{}{}'.format(errorstring, SentenceID))
-    if PETRglobals.StoponError:
-        raise HasParseError
-    else:
-        raise UnbalancedTree(errorstring)
-"""
 
 
 def raise_ParseList_error(call_location_string):
@@ -990,8 +972,6 @@ def get_loccodes(thisloc, CodedEvents, UpperSeq, LowerSeq):
         except IndexError:
             raise_ParseList_error(
                 'Initial index error on LowerSeq in get_loccodes()')
-        # for event in CodedEvents:
-            #print(SentenceID + '\t' + event[0] + '\t' + event[1] + '\t' + event[2])
         if '(NEC' in neitem:  # extract the compound codes
             ka = thisloc[0] + 1
             while '~NEC' not in LowerSeq[ka]:
@@ -1308,7 +1288,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
 
         upper = []
         lower = []
-        # print(kitem,ParseList[kitem],ParseList[kitem+1])
         if ('(VP' in ParseList[kitem]) and ('(VB' in ParseList[kitem + 1]):
             vpstart = kitem   # check_passive could change this
             try:
@@ -1328,6 +1307,7 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                     "'",
                     targ in PETRglobals.VerbDict['verbs'])
             if targ in PETRglobals.VerbDict['verbs']:
+        
                 SourceLoc = ""
                 TargetLoc = ""
                 if ShowPattMatch:
@@ -1361,7 +1341,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                 hasmatch = False
                 if not patternlist.keys() == ['#']:
                     # compound verb, look ahead
-                    #print("LOOKING AHEAD",patternlist,ParseList,targ)
 
                     i = kitem + 3
                     found_flag = True
@@ -1380,21 +1359,14 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                                 hasmatch = True
                                 if not '#' in upper_compound:
                                     # this verb is compounded in both directions, again don't know how SNLP will parse this
-                                    #print("DOUBLE COMPOUND VERB")
-                                    # print(targ,upper_compound,patternlist,"\n\n",ParseList)
                                     raise_CheckVerbs_error()
                                 verbdata = upper_compound['#']
                             else:
-                                i += 1  # Does this actually work?
-                                # if ParseList[i] == "REALLY":
-                                # print(ParseList,patternlist,i)
-                                #    exit()
+                                i += 1
                         else:
-                            # print(verb_start,verb_end,patternlist,ParseList[i])
-
+ 
                             if '#' in patternlist:
                                 verbdata = patternlist['#']['#']
-                            #print("Incomplete match on compound verb")
                             break
 
                 if not hasmatch:
@@ -1403,7 +1375,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                         i = kitem - 1
                         found_flag = True
                         while found_flag and i >= 0:
-                            # print(ParseList[i])
                             skipcheck = skip_item(ParseList[i])
                             if skipcheck:
                                 i -= 1
@@ -1419,8 +1390,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                                     i -= 1
                             else:
 
-                                # print(verb_start,verb_end,patternlist,ParseList[i])
-                                #print("Incomplete match on compound verb")
                                 if '#' in patternlist:
                                     verbdata = patternlist['#']['#']
                                 break
@@ -1464,7 +1433,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                     EventCode = verbcode
                     hasmatch = True
                 if hasmatch:
-                    # print("##########",SourceLoc)
                     if SourceLoc == "":
                         SourceLoc = find_source(upper, SourceLoc)
                     if ShowPattMatch:
@@ -1488,7 +1456,7 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                                 TargetLoc,
                                 IsPassive,
                                 EventCode)
-                            # print(CodedEvents)
+
                 if hasmatch:
 
                     while (endtag not in ParseList[kitem]):
@@ -1536,7 +1504,6 @@ def verb_pattern_match(patlist, upper, lower):
             print("\nChecking upper", upper)
         i = 0
         while i < len(phrase):
-            #print("checking","'"+upper[i]+"'",option,in_NEC,in_NE,'%' in path)
 
             skipcheck = skip_item(upper[i])
 
@@ -1554,7 +1521,6 @@ def verb_pattern_match(patlist, upper, lower):
                     print("could be a synset")
                 matchflag = False
                 for set in path['synsets'].keys():
-                 #   print("SUP", set,PETRglobals.VerbDict['verbs'][set])
                     if upper[i] in PETRglobals.VerbDict['verbs'][set]:
                         if VPMPrint:
                             print("We found a synset match")
@@ -1608,7 +1574,6 @@ def verb_pattern_match(patlist, upper, lower):
                     print("Matching compound", upper, i)
                 ka = i
                 while '(NEC' not in upper[ka]:
-                    # print(upper[ka])
                     ka += 1
                     if ka >= len(upper):
                         option = 6
@@ -1624,8 +1589,8 @@ def verb_pattern_match(patlist, upper, lower):
                 continue
 
             elif skipcheck > 0:
-                # if VPMPrint:
-                #    print("skipping")
+                if VPMPrint:
+                    print("skipping")
                 if "~NEC" in upper[i]:
                     in_NEC = not in_NEC
                 elif "~NE" in upper[i]:
@@ -1693,7 +1658,6 @@ def verb_pattern_match(patlist, upper, lower):
     in_NE = False
     if VPMPrint:
         print("\nChecking phrase", lower)
-    # print("\t\t\t\tpatlist:",patlist)
     phrase_actor = ""
     while i < len(lower):
         if pathleft == []:
@@ -1743,8 +1707,6 @@ def verb_pattern_match(patlist, upper, lower):
             #print("could be a synset")
             matchflag = False
             for set in path['synsets'].keys():
-                # if VPMPrint:
-                    #print("SUP", set,PETRglobals.VerbDict['verbs'][set])
                 if lower[i] in PETRglobals.VerbDict['verbs'][set]:
                     if VPMPrint:
                         print("We found a synset match")
@@ -1873,28 +1835,6 @@ def verb_pattern_match(patlist, upper, lower):
         option = 0
 
     return {}, "", ""
-
-
-"""def get_actor_code(index):
-#    Get the actor code, resolving date restrictions.
-    global SentenceOrdDate
-
-    codelist = PETRglobals.ActorCodes[index]
-    if len(codelist) == 1 and len(codelist[0]) == 1:
-        return codelist[0][0]  # no restrictions: the most common case
-    for item in codelist:
-        if len(item) > 1:  # interval date restriction
-            if item[0] == 0 and SentenceOrdDate <= item[1]:
-                return item[2]
-            if item[0] == 1 and SentenceOrdDate >= item[1]:
-                return item[2]
-            if item[0] == 2 and SentenceOrdDate >= item[1] and SentenceOrdDate <= item[2]:
-                return item[3]
-    # interval search failed, so look for an unrestricted code
-    for item in codelist:
-        if len(item) == 1:
-            return item[0]
-    return '---' 	# if no condition is satisfied, return a null code;"""
 
 
 def get_actor_code(index, SentenceOrdDate):
@@ -2047,9 +1987,8 @@ def check_NEphrase(nephrase, date):
             if ShowNEParsing:
                 print("                Found", phrasefrag[0])  # debug
             patlist = PETRglobals.ActorDict[nephrase[kword]]
-            # print(patlist)
-            # if ShowNEParsing:
-            # print("CNEPh Mk1:", patlist)
+            if ShowNEParsing:
+                 print("CNEPh Mk1:", patlist)
             # iterate over the patterns beginning with this word
             actor_index = (kword, kword)
             for index in range(len(patlist)):
@@ -2585,9 +2524,6 @@ def make_event_strings(
             'tuple error when attempting to extract src and tar codes in make_event_strings(): {}'.format(SentenceID))
         return CodedEvents
 
-    # print(srccodes,tarcodes)
-# TODO: This needs to be fixed: this is the placeholder code for having a general country-
-#      level location for the sentence or story
     SentenceLoc = ''
 
     if len(srccodes) == 0 or len(tarcodes) == 0:
@@ -2634,28 +2570,6 @@ def make_event_strings(
     return CodedEvents
 
 # ========================== PRIMARY CODING FUNCTIONS ====================== #
-
-
-def extract_Sentence_info(item):
-    """
-    Extracts various global fields from the <Sentence record
-    item is a dictionary of attributes generated from the XML input.
-
-# can raise SkipRecord if date is missing
-    global SentenceDate, SentenceID, SentenceCat, SentenceLoc, SentenceValid
-    global SentenceOrdDate
-    SentenceID = item['id']
-    SentenceCat = item['category']
-    if 'place' in item:
-        SentenceLoc = item['place']
-    else:
-        SentenceLoc = ''
-    if item['valid'].lower() == 'true':
-        SentenceValid = True
-    else:
-        SentenceValid = False
-    return(SentenceDate, SentenceID, SentenceCat, SentenceLoc, SentenceValid,SentenceOrdDate)
-    """
 
 
 def check_discards(SentenceText):
@@ -2730,7 +2644,6 @@ def code_record(plist1, pstart, date):
     source/target/event triples.
     """
     plist = plist1
-    #global CodedEvents
     global SentenceID
     global NEmpty
 
@@ -2750,133 +2663,17 @@ def code_record(plist1, pstart, date):
         print(date)
     if ShowParseList:
         print('code_rec-Parselist::', plist)
-    # try:
+    try:
     # this can throw HasParseError which is caught in do_coding
-    CodedEvents, SourceLoc = check_verbs(plist, pstart, CodedEvents)
-    # except IndexError:  # <14.09.04: HasParseError should get all of these now
-    #    print("VERBS ERROR")
-    #    logger.warning('\tIndexError in parsing, but HasParseError should have caught this. Probably a bad sentence.')
-    #    print('\tIndexError in parsing. Probably a bad sentence.')
-
+        CodedEvents, SourceLoc = check_verbs(plist, pstart, CodedEvents)
+    except IndexError:  # <14.09.04: HasParseError should get all of these now
+        logger.warning('\tIndexError in parsing, but HasParseError should have caught this. Probably a bad sentence.')
+    
     NEmpty = 0
     if len(CodedEvents) == 0:
         NEmpty += 1
 
     return CodedEvents, plist, NEmpty
-
-#	if len(raw_input("Press Enter to continue...")) > 0: sys.exit()
-
-
-def do_validation(filepath):
-    """ Unit tests using a validation file. """
-    nvalid = 0
-
-    print("Using Validation File: ", filepath)
-    answers = {}
-    holding = {}
-
-    tree = ET.iterparse(filepath)
-    config = {}
-    for event, elem in tree:
-        if elem.tag == "Config":
-            config[elem.attrib['option']] = elem.attrib
-
-        if event == "end" and elem.tag == "Sentence":
-            story = elem
-
-            # Check to make sure all the proper XML attributes are included
-            attribute_check = [key in story.attrib for key in
-                               ['date', 'id', 'sentence', 'source']]
-            if not attribute_check:
-                print('Need to properly format your XML...')
-                break
-
-            parsed_content = story.find('Parse').text
-            parsed_content = utilities._format_parsed_str(
-                parsed_content)
-
-            # Get the sentence information
-
-            if story.attrib['sentence'] == 'true':
-
-                entry_id, sent_id = story.attrib['id'].split('-')
-                parsed = story.findall('EventCoding')
-                entry_id = entry_id + "" + sent_id
-
-                # if not entry_id == "SYNSET22b": # Debugging validation files
-                #    continue
-
-                if not parsed is None:
-                    for item in parsed:
-                        answers[(entry_id, sent_id)] = answers.setdefault(
-                            (entry_id, sent_id), []) + [item.attrib]
-                else:
-                    print("\n", entry_id, sent_id, ":INPUT MISSING\n")
-                text = story.find('Text').text
-                text = text.replace('\n', '').replace('  ', '')
-                sent_dict = {
-                    'content': text,
-                    'parsed': parsed_content,
-                    'config': config.copy(),
-                    'date': story.attrib['date']}
-                meta_content = {'date': story.attrib['date'],
-                                'source': entry_id}
-                content_dict = {'sents': {sent_id: sent_dict},
-                                'meta': meta_content}
-                if entry_id not in holding:
-                    holding[entry_id] = content_dict
-                else:
-                    holding[entry_id]['sents'][sent_id] = sent_dict
-
-    updated = do_coding(holding, 'VALIDATE')
-
-    correct = 0
-    count = 0
-    return
-    for id, entry in sorted(updated.items()):
-        count += 1
-        if entry['sents'] is None:
-            print("Correct:", id, "discarded\n")
-            correct += 1
-            continue
-        for sid, sent in sorted(entry['sents'].items()):
-
-            calc = []
-            given = []
-            if not 'events' in sent:
-                calc += ["empty"]
-            else:
-                for event in sorted(sent['events']):
-                    calc += [(event[0], event[1], event[2])]
-            if not (id, sid) in answers:
-                correct += 1
-                continue
-            for event in sorted(answers[(id, sid)]):
-                if 'noevents' in event:
-                    given += ["empty"]
-                    continue
-                elif 'error' in event:
-                    given += ["empty"]
-
-                    continue
-                given += [(event["sourcecode"],
-                           event["targetcode"],
-                           event["eventcode"])]
-            if sorted(given) == sorted(calc):
-                correct += 1
-            else:
-                print(
-                    "MISMATCH",
-                    id,
-                    sid,
-                    "\nExpected:",
-                    given,
-                    "\nActual",
-                    calc,
-                    "\n")
-
-    print("Correctly identified: ", correct, "out of", count)
-    sys.exit()
 
 
 def do_coding(event_dict, out_file):
@@ -2896,22 +2693,22 @@ def do_coding(event_dict, out_file):
     NDiscardSent = 0
     NDiscardStory = 0
 
-    file = open("output.tex", 'w')
-
     logger = logging.getLogger('petr_log')
     times = 0
     sents = 0
+    
     for key, val in event_dict.items():
 
         prev_code = []
 
         SkipStory = False
-        print('\n\nProcessing {}'.format(key))
+        logger.info('\n\nProcessing {}'.format(key))
         StoryDate = event_dict[key]['meta']['date']
         StorySource = 'TEMP'
 
         for sent in val['sents']:
             if 'parsed' in event_dict[key]['sents'][sent]:
+                
                 if 'config' in val['sents'][sent]:
                     for id, config in event_dict[key][
                             'sents'][sent]['config'].items():
@@ -2919,29 +2716,16 @@ def do_coding(event_dict, out_file):
 
                 SentenceID = '{}_{}'.format(key, sent)
 
-                print('\tProcessing {}'.format(SentenceID))
+                logger.info('\tProcessing {}'.format(SentenceID))
                 SentenceText = event_dict[key]['sents'][sent]['content']
-                # print(SentenceText)
-                SentenceDate = event_dict[key]['sents'][sent][
-                    'date'] if 'date' in event_dict[key]['sents'][sent] else StoryDate
+                SentenceDate = event_dict[key]['meta']['date']
                 Date = PETRreader.dstr_to_ordate(SentenceDate)
                 SentenceSource = 'TEMP'
 
                 parsed = event_dict[key]['sents'][sent]['parsed']
-                treestr = parsed
-
-                """
-                t1 = time.time()
-                test_obj = PETRtree.Event(treestr,SentenceText,Date)
-                test_obj.print_to_file(test_obj.tree,file = file)
-                code_time = time.time()-t1
-                times+=code_time
-                sents += 1
-                print(code_time)
-
-                continue
-                """
-
+                
+                treestr = utilities._format_parsed_str(parsed)
+                
                 disc = check_discards(SentenceText)
 
                 if disc[0] > 0:
@@ -2957,22 +2741,6 @@ def do_coding(event_dict, out_file):
                         NDiscardStory += 1
                         break
 
-    # TODO
-    # Can implement this easily. The sentences are organized by story in the dicts
-    # so it's easy to rework this. Just when we're done with a key then write out
-    # the events for the included sentences. Gonna skip it for now
-    #            if not PETRglobals.CodeBySentence:
-    #                # write events when we hit a new story
-    #                if SentenceID[-6:-3] != CurStoryID:
-    #                    if not SkipStory:
-    #                        write_events()
-    #                    reset_event_list()
-    #                    if PETRglobals.PauseByStory:
-    #                        if len(raw_input("Press Enter to continue...")) > 0:
-    #                            sys.exit()
-    #            else:
-    #                reset_event_list()
-
                 else:
                     try:
                         ParseList, ParseStart = read_TreeBank(treestr)
@@ -2984,6 +2752,7 @@ def do_coding(event_dict, out_file):
                         NEmpty += emptyCount
                     except HasParseError:
                         coded_events = None
+                
                 if coded_events:
                     event_dict[key]['sents'][sent]['events'] = coded_events
                 if coded_events and PETRglobals.IssueFileName != "":
@@ -3005,6 +2774,7 @@ def do_coding(event_dict, out_file):
         if SkipStory:
             event_dict[key]['sents'] = None
 
+
     print("Summary:")
     print(
         "Stories read:",
@@ -3020,8 +2790,6 @@ def do_coding(event_dict, out_file):
         NDiscardStory,
         "  Sentences without events:",
         NEmpty)
-    #print("Average Coding time = ", times/sents)
-    # print("\n\\end{document})",file=file)
 
     return event_dict
 
