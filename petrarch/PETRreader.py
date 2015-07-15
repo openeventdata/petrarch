@@ -1394,68 +1394,8 @@ def dstr_to_ordate(datestring):
 
 
 
+
 def read_actor_dictionary(actorfile):
-
-    open_FIN(actorfile, "actor")
-
-    line = read_FIN_line().strip()
-    current_acts = []
-    datelist = []
-    while len(line) > 0:
-        if line[0] == '[':  # Date
-            data = line[1:-1].split()
-            code = data[0]
-            try:
-                if '-' in data[1]:
-                    dates = data[1].split('-')
-                else:
-                    dates = [data[1]]
-            except:
-                dates = []
-            datelist.append((code, dates))
-        else:
-            if line[0] == '+':  # Synonym
-                actor = line[1:].replace("_", ' ').split()
-            else:  # Base verb
-                # add previous verb entry to dictionary:
-                for targ in current_acts:
-                    list = PETRglobals.ActorDict
-                    while targ != []:
-                        if targ[0] in [' ', '']:
-                            targ = targ[1:]
-                            continue
-                        if not isinstance(list, dict):
-                            print("BADNESS", list)
-                            exit()
-                        list = list.setdefault(targ[0], {})
-                        targ = targ[1:]
-                    list["#"] = datelist
-
-                datelist = []
-                current_acts = []
-                actor = line.replace("_", ' ').split()
-                if actor[-1][-1] == ']':
-                    data = actor[-1][1:-1].split()
-                    code = data[0]
-                    try:
-                        if '-' in data[1]:
-                            dates = data[1].split('-')
-                        else:
-                            dates = [data[1][1:]]
-                    except:
-                        dates = []
-                    datelist.append((code, dates))
-                    actor.pop()
-            current_acts.append(actor)
-
-        line = read_FIN_line().strip()
-
-    # for j,k in sorted(PETRglobals.ActorDict.items()):
-    #    print(j,'\t\t',k.keys())
-
-
-
-def _read_actor_dictionary(actorfile):
     """ Reads a TABARI-style actor dictionary. """
     """
 	Actor dictionary list elements:
@@ -1804,21 +1744,6 @@ def read_agent_dictionary(agent_path):
 
     def store_agent(nounst, code):
     # parses nounstring and stores the result with code
-    
-        list = PETRglobals.AgentDict
-        targ = nounst.replace("_",' ').split()
-        while targ != []:
-            if targ[0] in [' ','']:
-                targ = targ[1:]
-                continue
-            list = list.setdefault(targ[0],{})
-            targ = targ[1:]
-        list["#"] = code
-
-        return
-        
-    
-    
     
         nounlist = make_noun_list(nounst)
         keyword = nounlist[0][0]
