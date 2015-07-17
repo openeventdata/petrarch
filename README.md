@@ -42,7 +42,7 @@ will be large changes in the API.
 
 It is possible to run PETRARCH as a stand-alone program. Most of our
 development work has gone into incorporating PETRARCH into a full pipeline of
-utilities, e.g., the [Phoenix pipeline](https://github.com/openeventdata/phoenix_pipeline).
+utilities, though, e.g., the [Phoenix pipeline](https://github.com/openeventdata/phoenix_pipeline).
 There's also a RESTful wrapper around PETRARCH and CoreNLP named
 [hypnos](https://github.com/caerusassociates/hypnos). It's probably worthwhile
 to explore those options before trying to use PETRARCH as a stand-alone.
