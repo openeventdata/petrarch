@@ -1,8 +1,4 @@
-
-
-
 from petrarch import petrarch, PETRglobals, PETRreader, utilities
-
 
 
 config = petrarch.utilities._get_data('data/config/', 'PETR_config.ini')
@@ -11,6 +7,7 @@ petrarch.PETRreader.parse_Config(config)
 print("reading dicts")
 petrarch.read_dictionaries()
 petrarch.start_logger()
+
 
 def test_version():
     assert petrarch.get_version() == "0.4.0"
@@ -54,8 +51,8 @@ def test_simple2():
 def test_complex1():
 
     text = "A Tunisian court has jailed a Nigerian student for two years for helping young militants join an armed Islamic group in Lebanon, his lawyer said Wednesday."
-    
-    parse = """( (S (S 
+
+    parse = """( (S (S
     (NP (DT A) (NNP Tunisian) (NN court))
     (VP (AUXZ has)
     (VP (VBN jailed)
@@ -93,7 +90,7 @@ def test_complex1():
 
 def test_check_balance():
     petrarch.check_balance(['(','~'])
-    
+
     try:
         petrarch.check_balance(['(','~','~'])
         assert False
@@ -116,44 +113,44 @@ def test_check_balance():
 def test_read_treebank():
 
     list = [u'(', u'(S', u'(NP1', u'(NE', u'---', u'A', u'500-PAGE', u'REPORT', u'~NE', u'(VP1', u'(VBN', u'RELEASED', u'~VBN', u'(NE', u'---', u'TUESDAY', u'~NE', u'(PP', u'(IN', u'IN', u'~IN', u'(NE', u'---', u'THE', u'RWANDAN', u'CAPITAL', u'~NE', u'~PP', u'~VP1', u'~NP1', u'(VP2', u'(VP3', u'(VBD', u'ALLEGED', u'~VBD', u'(SBAR', u'(SBAR', u'(IN', u'THAT', u'~IN', u'(S', u'(NE', u'---', u'FRANCE', u'~NE', u'(VP4', u'(VBD', u'WAS', u'~VBD', u'(ADJP', u'(JJ', u'AWARE', u'~JJ', u'(PP', u'(IN', u'OF', u'~IN', u'(NE', u'---', u'PREPARATIONS', u'FOR', u'THE', u'GENOCIDE', u'~NE', u'~PP', u'~ADJP', u'~VP4', u'~S', u'~SBAR', u'(,', u',', u'~,', u'(CCP', u'AND', u'~CCP', u'(SBAR', u'(IN', u'THAT', u'~IN', u'(S', u'(NE', u'---', u'THE', u'FRENCH', u'MILITARY', u'IN', u'RWANDA', u'~NE', u'(VP5', u'(VBD', u'CONTRIBUTED', u'~VBD', u'(PP', u'(TO', u'TO', u'~TO', u'(S', u'(VP6', u'(VBG', u'PLANNING', u'~VBG', u'(NE', u'---', u'THE', u'MASSACRES', u'~NE', u'~VP6', u'~S', u'~PP', u'~VP5', u'~S', u'~SBAR', u'~SBAR', u'~VP3', u'(CCP', u'AND', u'~CCP', u'(VP7', u'(ADVP', u'(RB', u'ACTIVELY', u'~RB', u'~ADVP', u'(VBD', u'TOOK', u'~VBD', u'(NE', u'---', u'PART', u'IN', u'THE', u'KILLING', u'~NE', u'~VP7', u'~VP2', u'(.', u'.', u'~.', u'~S', u'~']
-    sent = """( (S 
+    sent = """( (S
             (NP (NP (DT A) (JJ 500-page) (NN report))
-            (VP (VBN released) 
-            (NP (NNP Tuesday)) 
-            (PP (IN in) 
-            (NP (DT the) (NNP Rwandan) (NN capital))))) 
-            (VP 
-            (VP (VBD alleged) (SBAR (SBAR (IN that) (S 
-            (NP (NNP France)) 
-            (VP (VBD was) (ADJP (JJ aware) 
-            (PP (IN of) 
-            (NP (NP (NNS preparations)) 
-            (PP (IN for) 
-            (NP (DT the) (NN genocide))))))))) (, ,) (CC and) (SBAR (IN that) (S 
-            (NP (NP (DT the) (JJ French) (NN military)) 
-            (PP (IN in) 
-            (NP (NNP Rwanda)))) 
-            (VP (VBD contributed) 
-            (PP (TO to) (S 
-            (VP (VBG planning) 
-            (NP (DT the) (NNS massacres)))))))))) (CC and) 
-            (VP (ADVP (RB actively)) (VBD took) 
-            (NP (NP (NN part)) 
-            (PP (IN in) 
+            (VP (VBN released)
+            (NP (NNP Tuesday))
+            (PP (IN in)
+            (NP (DT the) (NNP Rwandan) (NN capital)))))
+            (VP
+            (VP (VBD alleged) (SBAR (SBAR (IN that) (S
+            (NP (NNP France))
+            (VP (VBD was) (ADJP (JJ aware)
+            (PP (IN of)
+            (NP (NP (NNS preparations))
+            (PP (IN for)
+            (NP (DT the) (NN genocide))))))))) (, ,) (CC and) (SBAR (IN that) (S
+            (NP (NP (DT the) (JJ French) (NN military))
+            (PP (IN in)
+            (NP (NNP Rwanda))))
+            (VP (VBD contributed)
+            (PP (TO to) (S
+            (VP (VBG planning)
+            (NP (DT the) (NNS massacres)))))))))) (CC and)
+            (VP (ADVP (RB actively)) (VBD took)
+            (NP (NP (NN part))
+            (PP (IN in)
             (NP (DT the) (NN killing)))))) (. .)))"""
-    
+
     sent = utilities._format_parsed_str(sent)
 
 
     plist, pstart = petrarch.read_TreeBank(sent)
     assert plist == list and pstart == 2
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+

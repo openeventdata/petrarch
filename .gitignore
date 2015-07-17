@@ -1,5 +1,6 @@
 *.pyc
 *.swp
+*.swo
 .DS_Store
 .ropeproject
 petrarch_app.py
