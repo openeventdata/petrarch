@@ -119,8 +119,6 @@ def parse_Config(config_path):
 
     print('\n', end=' ')
     parser = ConfigParser()
-#		logger.info('Found a config file in working directory')
-#	print "pc",PETRglobals.ConfigFileName
     confdat = parser.read(config_path)
     if len(confdat) == 0:
         print(
@@ -134,7 +132,6 @@ def parse_Config(config_path):
         PETRglobals.AgentFileName = parser.get(
             'Dictionaries',
             'agentfile_name')
-#		print "pc",PETRglobals.AgentFileName
         PETRglobals.DiscardFileName = parser.get(
             'Dictionaries',
             'discardfile_name')
@@ -171,7 +168,6 @@ def parse_Config(config_path):
                     line = fpar.readline()
                 fpar.close()
 
-#		print "pc",PETRglobals.TextFileList
 
         if parser.has_option('Dictionaries', 'issuefile_name'):
             PETRglobals.IssueFileName = parser.get(
@@ -270,8 +266,6 @@ def parse_Config(config_path):
             PETRglobals.ConfigFileName)
         print("Terminating program")
         sys.exit()
-#		logger.warning('Problem parsing config file. {}'.format(e))
-
 
 # ================== PRIMARY INPUT USING FIN ================== #
 
@@ -353,7 +347,6 @@ def read_FIN_line():
     line = FIN.readline()
     FINnline += 1
     while True:
-        #		print '==',line,
         if len(line) == 0:
             break  # calling function needs to handle EOF
         # deal with simple lines we need to skip
@@ -382,7 +375,6 @@ def read_FIN_line():
             break
         line = FIN.readline()
         FINnline += 1
-#	print "++",line
     FINline = line
     return line
 
@@ -407,11 +399,9 @@ def extract_attributes(theline):
     At present, these always require a quoted field which follows an '=', though it
     probably makes sense to make that optional and allow attributes without content
     """
-#	print "PTR-1:", theline,
     theline = theline.strip()
     if ' ' not in theline:  # theline only contains a keyword
         PETRglobals.AttributeList = theline[1:-2]
-#		print "PTR-1.1:", PETRglobals.AttributeList
         return
     pline = theline[1:].partition(' ')  # skip '<'
     PETRglobals.AttributeList = [pline[0]]
@@ -429,13 +419,12 @@ def extract_attributes(theline):
             pline = pline[2].partition('"')
             PETRglobals.AttributeList.append(pline[0].strip())
             theline = pline[2]
-#	print "PTR-2:", PETRglobals.AttributeList
 
 
 def check_attribute(targattr):
     """ Looks for targetattr in AttributeList; returns value if found, null string otherwise."""
-# This is used if the attribute is optional (or if error checking is handled by the calling
-# routine); if an error needs to be raised, use get_attribute()
+    # This is used if the attribute is optional (or if error checking is handled by the calling
+    # routine); if an error needs to be raised, use get_attribute()
     if (targattr in PETRglobals.AttributeList):
         return (
             PETRglobals.AttributeList[
@@ -471,7 +460,7 @@ def read_discard_list(discard_path):
 
     The file format allows # to be used as a in-line comment delimiter.
 
-    File is stored as a simple list and the interpretation of the strings is done in
+    File is stored as a dictionary search tree and the interpretation of the strings is done in
     check_discards()
 
     ===== EXAMPLE =====
@@ -497,24 +486,6 @@ def read_discard_list(discard_path):
     BASKETBALL
     BATSMAN  # MleH 14 Jul 2009
     BATSMEN  # MleH 12 Jul 2009
-
-    logger = logging.getLogger('petr_log')
-    logger.info("Reading " + PETRglobals.DiscardFileName)
-    open_FIN(discard_path, "discard")
-
-    line = read_FIN_line()
-    while len(line) > 0:  # loop through the file
-        if '#' in line:
-            line = line[:line.find('#')]
-        targ = line.strip()
-        if targ.startswith('+'):
-            targ = '+ ' + targ[1:]
-        else:
-            targ = ' ' + targ
-        PETRglobals.DiscardList.append(targ.upper())  # case insensitive match
-        line = read_FIN_line()
-    close_FIN()
-
 
     """
 
@@ -682,12 +653,6 @@ def read_issue_list(issue_path):
         line = read_FIN_line()
     close_FIN()
 
-    """ debug
-	ka = 0
-	while ka < 128 :
-		print PETRglobals.IssueList[ka],PETRglobals.IssueCodes[PETRglobals.IssueList[ka][1]]
-		ka += 1
-	"""
 
 # ================== VERB DICTIONARY INPUT ================== #
 
@@ -725,57 +690,6 @@ def read_verb_dictionary(verb_path):
     This is followed by a set of patterns -- these begin with '-' -- which generally
     follow the same syntax as TABARI patterns. The pattern set is terminated with a
     blank line.
-
-    MULTIPLE-WORD VERBS
-    Multiple-word "verbs" such as "CORDON OFF", "WIRE TAP" and "BEEF UP" are entered by
-    connecting the word with an underscore (these must be consecutive) and putting a '+'
-    in front of the word -- only the first and last are currently allowed -- of the
-    phrase that TreeBank is going to designate as the verb.If there is no {...}, regular
-    forms are constructed for the word designated by '+'; otherwise all of the irregular
-    forms are given in {...}. If you can't figure out which part of the phrase is the
-    verb, the phrase you are looking at is probably a noun, not a verb. Multi-word verbs
-    are treated in patterns just as single-word verbs are treated.
-
-    Examples
-    +BEEF_UP
-    RE_+ARREST
-    +CORDON_OFF {+CORDONED_OFF +CORDONS_OFF +CORDONING_OFF}
-    +COME_UPON {+COMES_UPON +CAME_UPON +COMING_UPON}
-    WIRE_+TAP {WIRE_+TAPS WIRE_+TAPPED  WIRE_+TAPPING }
-
-    Multi-words are stored in a list consisting of
-        code
-        primary form (use as a pointer to the pattern
-        tuple: (True if verb is at start of phrase, False otherwise; remaining words)
-
-    [15.04.30]
-    If a word occurs both as the verb in a multi-word and as a single word, it will be at
-    the end of the list of multi-word candidate strings: that is, the multi-world
-    combinations are checked first, then only if none of these match is the single word
-    option used. Due to sub-optimized code, words that are the verb in a multi-word verb
-    cannot be the first word in a block of verbs. The current dictionary has removed
-    all of these.
-
-    SYNSETS
-    Synonym sets (synsets) are labelled with a string beginning with & and defined using
-    the label followed by a series of lines beginning with + containing words or phrases.
-    The phrases are interpreted as requiring consecutive words; the words can be separated
-    with either spaces or underscores (they are converted to spaces). Synset phrases can
-    only contain words, not $, +, % or ^ tokens or synsets. At present, a synsets cannot
-    contain another synset as an element. [see note below] Synsets be used anywhere in a
-    pattern that a word or phrase can be used. A synset must be defined before it is used:
-    a pattern containing an undefined synset will be ignored -- but those definitions can
-    occur anywhere in the file.
-
-    Plurals are generated automatically using the rules in read_verb_dictionary/
-    make_plural(st) except when
-
-      -- The phrase ends with '_'
-
-      -- The label ends with '_', in which case plurals are not generated for any of the
-         phrases; this is typically used for synonyms that are not nouns
-
-    The '_' is dropped in both cases
 
     ====== EXAMPLE =====
 
@@ -847,6 +761,43 @@ def read_verb_dictionary(verb_path):
     - * RESIST  [112] ;tony  4/29/91
     - * WAR  [173] ;tony  4/22/91
 
+
+    STORAGE STRUCTURE
+    
+    
+    The verbs are stored withing the PETRglobals.VerbDict in two different subdictionaries.
+    The first, "verbs", contains the pattern of the base verb. For most verbs, this is just 
+    the word itself, but some verbs like "cordon off" and "wire tap" are multi-word verbs that
+    function as single words. These words are stored as a search tree, with the base root as
+    the word that will be marked as a verb (e.g. cordon and tap). Following these will be a tree 
+    structure of all the words in the compound verb that follow the verb, with a # on the end to
+    indicate the end of the search. After the #, all the words before the marked verb are in a similar 
+    tree structure in reverse order. A dictionary containing the list [arrest, wire tap, cordon off] 
+    would look like:
+    
+    
+                                     'CORDON' --- ' OFF' --- '#' --- '#'
+                                    /
+                                   /
+                                  /
+    PETRglobals.VerbDict --- 'verbs'------ 'ARREST' ---  '#' --- '#'
+                         \         \
+                          |         \
+                          |          \
+                          |          'TAP --- '#' --- 'WIRE' --- '#'
+                          |
+                          |
+                      'patterns'
+                                     
+                                     
+    After the final '#' there is a dictionary with two entries: meaning and code. The meaning
+    is used to find the entry in the patterns dictionary, and the code stores the specific code 
+    for that verb if it differs from the code of the meaning. The patterns dictionary stores all
+    the pattern information contained in the files after the synonyms, in a similar 
+    verb-after-#-before-#-info dictionary.
+    
+    
+    
     PROGRAMMING NOTES
 
     Notes
@@ -859,17 +810,6 @@ def read_verb_dictionary(verb_path):
         an open match.  However, per the comments below, generally TABARI dictionaries
         should be converted before being used with PETRARCH.
 
-    3. The verb dictionary is stored as follows:
-        [0] True: primary form
-        [1] Code
-        [2:n] 3-lists of multi-words: [code, primary form (use as a pointer to the pattern
-              list, tuple of words -- see store_multi_word_verb(loccode):)
-        [n:] 3-lists of lower pattern, upper pattern and code. Upper pattern is stored
-             in reverse order
-
-        [0] False
-        [1]: optional verb-specific code (otherwise use the primary code)
-        [2]: primary form (use as a pointer to the pattern list)
 
     VERB DICTIONARY DIFFERENCES FROM TABARI
 
@@ -930,12 +870,11 @@ def read_verb_dictionary(verb_path):
     Dudes.
 
     """
-    global theverb, verb  # <14.05.07> : not needed, right?
+    global theverb, verb
     PETRglobals.VerbDict = {'verbs': {}, 'phrases': {}}
 
     def add_dict_tree(targ, verb, meaning="", code='---',
                       upper=[], synset=False, dict='phrases', line=""):
-        # DOUBLE CHECK THAT VERB =/= targ[0]
         prev = verb
         list = PETRglobals.VerbDict[dict].setdefault(verb, {})
         while targ != []:
@@ -1169,7 +1108,7 @@ def read_verb_dictionary(verb_path):
 
             if verb[-1] == '_':
                 noplural = True
-                verb = verb[:-1]  # remove final blank and _
+                verb = verb[:-1]  # remove final _
             else:
                 noplural = False
             PETRglobals.VerbDict[verb] = {}
@@ -1236,11 +1175,6 @@ def read_verb_dictionary(verb_path):
 
     close_FIN()
 
-    # for k,v in sorted(PETRglobals.VerbDict.items()):
-    #    print(k)
-    #    for i,j in v.items():
-    #        print('\t',i,j)
-    # exit()
 
 
 def show_verb_dictionary(filename=''):
@@ -1847,13 +1781,6 @@ def read_agent_dictionary(agent_path):
         line = read_FIN_line()
 
     close_FIN()
-
-    # sort the patterns by the number of words
-    # for lockey in list(PETRglobals.AgentDict.keys()):
-    #    PETRglobals.AgentDict[lockey].sort(key=len, reverse=True)
-    # for i,j in sorted(PETRglobals.AgentDict.items()):
-    #    print(i,'\t\t',j.items())
-    # exit()
 
 
 def show_AgentDict(filename=''):

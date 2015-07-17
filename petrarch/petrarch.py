@@ -55,39 +55,6 @@ import PETRreader  # input routines
 import PETRwriter
 import utilities
 
-# ================================  PARSER/CODER GLOBALS  ================== #
-
-# ParseList = []   # linearized version of parse tree
-# ParseStart = 0   # first element to check (skips (ROOT, initial (S
-
-# text that can be matched prior to the verb; this is stored in reverse order
-#UpperSeq = []
-# LowerSeq = []  # text that can be matched following the verb
-
-# SourceLoc = 0  # location of the source within the Upper/LowerSeq
-# TargetLoc = 0  # location of the target within the Upper/LowerSeq
-
-SentenceID = ''   # ID line
-# EventCode = ''   # event code from the current verb
-# SourceCode = ''   # source code from the current verb
-# TargetCode = ''   # target code from the current verb
-
-
-# ================================  VALIDATION GLOBALS  ==================== #
-
-DoValidation = False   # using a validation file
-ValidOnly = False      # only evaluate cases where <Sentence valid="true">
-# validation mode : code triples that were produced; set in make_event_strings
-#CodedEvents = []
-ValidEvents = []  # validation mode : code triples that should be produced
-ValidInclude = []  # validation mode : list of categories to include
-ValidExclude = []  # validation mode : list of categories to exclude
-# validation mode :pause conditions: 1: always; -1 never; 0 only on error
-# [default]
-ValidPause = 0
-ValidError = ''      # actual error code
-ValidErrorType = ''  # expected error code
-
 # ================================  DEBUGGING GLOBALS  ==================== #
 # (comment out the second line in the pair to activate. Like you couldn't
 # figure that out.)
@@ -113,6 +80,7 @@ ShowNEParsing = False
 ShowMarkCompd = True
 ShowMarkCompd = False
 
+SentenceID = ""
 # ================== EXCEPTIONS ================== #
 
 
@@ -162,12 +130,13 @@ def raise_ParseList_error(call_location_string):
 
 # ========================== DEBUGGING FUNCTIONS ========================== #
 
+def get_version():
+    return "0.4.0"
+
 def show_tree_string(sent):
     """
     Indexes the () or (~in a string tree and prints as an indented list.
     """
-# show_tree_string() also prints the totals
-# call with ' '.join(list) to handle the list versions of the string
     newlev = False
     level = -1
     prevlevel = -1
@@ -445,7 +414,7 @@ def read_TreeBank(tree_string):
                 warningstr = """Unknown error type encountered in check_irregulars()
          --------- this is a programming bug but nonetheless the record was skipped: {}"""
             logger = logging.getLogger('petr_log')
-            logger.warning(warningstr.format(SentenceID))
+            #logger.warning(warningstr.format(SentenceID))
             ValidError = knownerror
             raise IrregularPattern
 
@@ -461,8 +430,8 @@ def read_TreeBank(tree_string):
             ka += 1
         if taglist[:3] == ['(ROOT', '(NE', '(NEC']:
             logger = logging.getLogger('petr_log')
-            logger.warning(
-                'Dateline pattern found in ParseList; record skipped: {}'.format(SentenceID))
+            #logger.warning(
+            #    'Dateline pattern found in ParseList; record skipped: {}'.format(SentenceID))
             ValidError = 'dateline'
             raise IrregularPattern
 
@@ -655,9 +624,6 @@ def read_TreeBank(tree_string):
         if '(PP' in treestr[npbds[0]:npbds[1]]:
             # there's another level of (PP here  <14.04.21: can't we just
             return ('')
-            # reduce this per (SBR?
-            # leave the (NEC in place. <14.01.15> It should be possible to add an
-            # index here, right?
         if treestr[kb + 2] == 'E':
             nepph += treestr[kb:npbds[1] + 1]           # pick up a ') '
         else:
@@ -699,15 +665,10 @@ def read_TreeBank(tree_string):
         kb = bds[0]
         if ShowMarkCompd:
             print('\nMC1:', treestr[kb:])
-        # these aren't straightforward compound noun phrases we are looking for
         if '(VP' in treestr[bds[0]:bds[1]] or '(S' in treestr[bds[0]:bds[1]]:
-            # convert CC to CCP, though <14.05.12> we don't actually do anything with
-            # this: (NEC is a sufficient trigger for additional processing of
-            # compounds
             treestr = treestr[:ka + 3] + 'P' + treestr[ka + 3:]
             if ShowMarkCompd:
                 print('\nMC2:', treestr[kb:])
-        # nested compounds: don't go there...
         elif treestr[bds[0]:bds[1]].count('(CC') > 1:
             # convert CC to CCP: see note above
             treestr = treestr[:ka + 4] + 'P' + treestr[ka + 4:]
@@ -720,8 +681,7 @@ def read_TreeBank(tree_string):
                     treestr[kb + 3:]  # convert NP to NEC
                 if ShowMarkCompd:
                     print('\nMC4:', treestr[kb:])
-    #############################
-
+    
     if ShowRTTrees:
         print('RT1.5 count:', treestr.count('('), treestr.count(')'))
 
@@ -812,7 +772,6 @@ def read_TreeBank(tree_string):
                     check_irregulars('get_NE_error')
 
                 if not nplist:
-                    # <14.02.27> Seems like an odd place to hit this error, and it will probably go away...
                     check_irregulars('empty_nplist')
                 for kb in range(len(nplist)):
                     fullline += nplist[kb] + ' '
@@ -862,7 +821,7 @@ def read_TreeBank(tree_string):
         print('RT2:', ParseList)
         show_tree_string(' '.join(ParseList))
 
-    ParseStart = 2  # skip (ROOT (S
+    ParseStart = 2 if ParseList[0] == '(' else 1
 
     check_irregulars()
 
@@ -990,7 +949,7 @@ def get_loccodes(thisloc, CodedEvents, UpperSeq, LowerSeq):
     return codelist
 
 
-def find_source(UpperSeq, Src):
+def find_source(UpperSeq, LowerSeq, Src, Trg):
     """
     Assign SourceLoc to the first coded or compound (NE in the UpperSeq; if
     neither found then first (NE with --- code Note that we are going through
@@ -999,27 +958,25 @@ def find_source(UpperSeq, Src):
     differently in make_event_string()
     """
     SourceLoc = Src
-    kseq = len(UpperSeq) - 1
-    while kseq >= 0:
-        if ('(NEC' in UpperSeq[kseq]):
+    kseq = 0
+    while kseq < len(UpperSeq):
+        if ('(NEC' in UpperSeq[kseq]) and not UpperSeq[kseq].endswith(LowerSeq[Trg[0]].split('>')[1]):
             SourceLoc = [kseq, True]
             return SourceLoc
-        if ('(NE' in UpperSeq[kseq]) and ('>---' not in UpperSeq[kseq]):
+        if ('(NE' in UpperSeq[kseq]) and ('>---' not in UpperSeq[kseq]) and not UpperSeq[kseq].endswith(LowerSeq[Trg[0]].split('>')[1]):
             SourceLoc = [kseq, True]
             return SourceLoc
-        kseq -= 1
-        # failed, so check for
-        # uncoded source
-    kseq = len(UpperSeq) - 1
-    while kseq >= 0:
-        if ('(NE' in UpperSeq[kseq]):
+        kseq += 1
+    kseq = 0
+    while kseq < len(UpperSeq):
+        if ('(NE' in UpperSeq[kseq]) and not UpperSeq[kseq].endswith(LowerSeq[Trg[0]].split('>')[1]):
             SourceLoc = [kseq, True]
             return SourceLoc
-        kseq -= 1
+        kseq += 1
     return SourceLoc
 
 
-def find_target(UpperSeq, LowerSeq, CodedEvents, SourceLoc, trgloc):
+def find_target(LowerSeq, TargetLoc):
     """
     Assigns TargetLoc
 
@@ -1032,54 +989,21 @@ def find_target(UpperSeq, LowerSeq, CodedEvents, SourceLoc, trgloc):
         the verb -- that does not have the same code as SourceLoc;
         4. first null-coded (NE in UpperSeq
     """
-    TargetLoc = trgloc
-    try:
-        srccodelist = get_loccodes(SourceLoc, CodedEvents, UpperSeq, LowerSeq)
+    
+    # Look in the lower phrase after the verb
+    k = 0
+    for item in LowerSeq:
+        if item.startswith('(NEC'):
+            return [k, False]
+        if item.startswith('(NE') and not item.endswith('>---'):
+            return [k, False]
+        k += 1
 
-    except:
-
-        raise_ParseList_error(
-            'tuple error in get_loccodes(SourceLoc) called from find_target()')
-    if len(srccodelist) == 1:
-        srccode = '>' + srccodelist[0]
-    else:
-        srccode = '>>>>'  # placeholder for a compound; this will not occur
-    kseq = 0
-    while kseq < len(LowerSeq):
-        if ('(NE' in LowerSeq[kseq]) and ('>---' not in LowerSeq[kseq]):
-            if (srccode not in LowerSeq[kseq]):
-                TargetLoc = [kseq, False]
-                return TargetLoc
-        kseq += 1
-
-    kseq = 0
-    while kseq < len(LowerSeq):
-        # source might also be uncoded now
-        if ('(NE' in LowerSeq[kseq]) and ('>---' in LowerSeq[kseq]):
-            TargetLoc = [kseq, False]
-            return TargetLoc
-        kseq += 1
-
-    # still didn't work, so look in UpperSeq going away from the verb, so we
-    # increment through UpperSeq
-    kseq = 0
-    while kseq < len(UpperSeq):
-        if ('(NE' in UpperSeq[kseq]) and ('>---' not in UpperSeq[kseq]):
-            if (srccode not in UpperSeq[kseq]):
-                TargetLoc = [kseq, True]
-                return TargetLoc
-        kseq += 1
-        # that failed as well,
-        # so finally check for
-        # uncoded target
-    kseq = 0
-    while kseq < len(UpperSeq):
-        if ('(NE' in UpperSeq[kseq]) and ('>---' in UpperSeq[kseq]):
-            # needs to be a different (NE from source
-            if (kseq != SourceLoc[0]):
-                TargetLoc = [kseq, True]
-                return TargetLoc
-        kseq += 1
+    k = 0
+    for item in LowerSeq:
+        if item.startswith('(NE'):
+            return [k, False]
+        k += 1
 
     return TargetLoc
 
@@ -1089,7 +1013,6 @@ def get_upper_seq(kword, ParseList, ParseStart):
     Generate the upper sequence starting from kword; Upper sequence currently
     terminated by ParseStart, ~S or ~,
     """
-
     UpperSeq = []
     while kword >= ParseStart:
         # print(kword,UpperSeq)
@@ -1319,21 +1242,10 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                 patternlist = PETRglobals.VerbDict['verbs'][targ]
                 verbcode = '---'
 
-                #################################
                 # Find verb boundaries, verb code
-                #
-                #   notes: Post-compound verbs should
-                #          work fine, e.g. "put off".
-                #          still unclear how pre-compounds work
-                #
-                #################################
-
                 verb_start = kitem + 2
                 verb_end = kitem + 2
 
-                # Prioritize compound verb matches
-                # I'm sure theres some information theoretical reason this is a
-                # good idea
 
                 meaning = ''
                 # print(targ)
@@ -1344,8 +1256,6 @@ def check_verbs(ParseList, ParseStart, CodedEv):
 
                     i = kitem + 3
                     found_flag = True
-                    # accounts for long compounds, dunno if these actually
-                    # exist
                     while found_flag:
                         skipcheck = skip_item(ParseList[i])
                         if skipcheck:
@@ -1358,8 +1268,12 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                                 upper_compound = patternlist[ParseList[i]]['#']
                                 hasmatch = True
                                 if not '#' in upper_compound:
-                                    # this verb is compounded in both directions, again don't know how SNLP will parse this
+                                    # this verb is compounded in both directions
+                                    #don't know how SNLP will parse this
+                                    
+                                    # Does english even have these?
                                     raise_CheckVerbs_error()
+                                
                                 verbdata = upper_compound['#']
                             else:
                                 i += 1
@@ -1401,7 +1315,7 @@ def check_verbs(ParseList, ParseStart, CodedEv):
 
                 if not verbdata == {}:
                     meaning = verbdata['meaning']
-                    code = verbdata['code']
+                    verbcode = verbdata['code']
                     line = verbdata['line']
 
                 upper = get_upper_seq(verb_start - 1, ParseList, ParseStart)
@@ -1409,18 +1323,19 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                 if not meaning == '':
                     patternlist = PETRglobals.VerbDict['phrases'][meaning]
                 if ShowPattMatch:
-                    print("CV-2 patlist")
+                    print("CV-2 patlist",patternlist.keys())
 
                 vpm, lowsrc, lowtar = verb_pattern_match(
                     patternlist, upper, lower)
                 hasmatch = False
+                
                 if not vpm == {}:
                     hasmatch = True
                     EventCode = vpm[0]['code']
                     line = vpm[0]['line']
                     SourceLoc = lowsrc if not lowsrc == "" else vpm[2]
                     TargetLoc = lowtar if not lowtar == "" else vpm[1]
-
+    
                 if hasmatch and EventCode == '---':
                     hasmatch = False
                 if not hasmatch and verbcode != '---':
@@ -1433,21 +1348,20 @@ def check_verbs(ParseList, ParseStart, CodedEv):
                     EventCode = verbcode
                     hasmatch = True
                 if hasmatch:
-                    if SourceLoc == "":
-                        SourceLoc = find_source(upper, SourceLoc)
+                    if TargetLoc == "":
+                        TargetLoc = find_target(lower, TargetLoc)
                     if ShowPattMatch:
-                        print("CV-3 src", SourceLoc)
-                    if not SourceLoc == "":
-                        if TargetLoc == "":
-                            TargetLoc = find_target(
+                        print("CV-3 trg", TargetLoc)
+                    if not TargetLoc == "":
+                        if SourceLoc == "":
+                            SourceLoc = find_source(
                                 upper,
                                 lower,
-                                CodedEvents,
                                 SourceLoc,
                                 TargetLoc)
-                        if not TargetLoc == "":
+                        if not SourceLoc == "":
                             if ShowPattMatch:
-                                print("CV-3 tar", TargetLoc)
+                                print("CV-3 src", SourceLoc)
                             CodedEvents = make_event_strings(
                                 CodedEvents,
                                 upper,
@@ -1475,15 +1389,19 @@ def verb_pattern_match(patlist, upper, lower):
     ##          ^ ="Skip to end of the (NE
     ##          % = Compound
     ##
+    ##      I'm sorry this is so long, but upper and lower matches are just different
+    ##      enough where this actually makes sense
+    ##
     ##########################################
     """
 
-    VPMPrint = False
+    VPMPrint =False
 
     def find_actor(phrase, i):
         for j in range(i, len(phrase)):
             if phrase[j][0] == "(":
                 return j
+        print("NO ACTOR FOUND",phrase,j)
 
     def upper_match(pathdict):
 
@@ -1493,6 +1411,7 @@ def verb_pattern_match(patlist, upper, lower):
         in_NE = False
         in_NEC = False
         phrase_actor = ""
+        phrase_actors = {}
         phrase = upper
         matchlist = []
         option = 0
@@ -1501,12 +1420,13 @@ def verb_pattern_match(patlist, upper, lower):
         source = ""
         target = ""
         if VPMPrint:
-            print("\nChecking upper", upper)
+            print("\nChecking upper", upper,path.keys())
         i = 0
         while i < len(phrase):
-
+            if VPMPrint:
+                print("Checking", phrase[i],path.keys())
             skipcheck = skip_item(upper[i])
-
+            
             # check direct word match
             if phrase[i] in path and not option > 0:
                 if VPMPrint:
@@ -1588,21 +1508,30 @@ def verb_pattern_match(patlist, upper, lower):
                 i = ka
                 continue
 
-            elif skipcheck > 0:
+            if skipcheck > 0:
                 if VPMPrint:
-                    print("skipping")
+                    print("skipping",i,len(lower))
                 if "~NEC" in upper[i]:
                     in_NEC = not in_NEC
                 elif "~NE" in upper[i]:
                     in_NE = not in_NE
-                i += 1
-                continue
+                
+                if i < len(lower) -1:
+                    i +=1
+                    continue
+                
+                if not '#' in path:
+                    return False,{}
+                if VPMPrint:
+                    print("Upper pattern matched at end", matchlist)
+                return True, (path['#'], target, source)
 
-            elif (not i >= len(upper)) and not option > 6:
+
+            if (not i >= len(upper)) and not option > 6:
                 i += 1
                 pathleft.append((path, i, 7))
                 if VPMPrint:
-                    print("skipping")
+                    print("Skipping")
                 option = 0
                 matchlist.append("*")
                 continue
@@ -1634,10 +1563,12 @@ def verb_pattern_match(patlist, upper, lower):
 
             i += 1
             option = 0
-            # print("MATCHED",matchlist)
-
+            print("MATCHED",matchlist,path.keys())
+        
         if "#" in path:
             return True, (path['#'], target, source)
+        if VPMPrint:
+            print("NO MATCH IN UPPER")
         return False, {}
 
     #################################################
@@ -1655,6 +1586,7 @@ def verb_pattern_match(patlist, upper, lower):
     target = ""
     source = ""
     in_NEC = False
+    phrase_actors = {}
     in_NE = False
     if VPMPrint:
         print("\nChecking phrase", lower)
@@ -1670,29 +1602,45 @@ def verb_pattern_match(patlist, upper, lower):
                 "'",
                 option,
                 phrase_actor,
-                in_NE)
+                in_NE,path.keys())
         skipcheck = skip_item(lower[i])
 
         # return to last point of departure
-        if i == len(lower) - 1 and not pathleft[-1][2] == 0:
-            if VPMPrint:
-                print("retracing", len(pathleft))
-            p = pathleft.pop()
-            path = p[0]
-            i = p[1] + 1
-            option = p[2]
-            matchlist.pop()
-            continue
 
-        if skipcheck > 0:
+        if skipcheck > 0 and option > -1:
+            if VPMPrint:
+                print("Skipping")
             if "NEC" in lower[i]:
                 in_NEC = not in_NEC
             elif "NE" in lower[i]:
                 in_NE = not in_NE
                 if len(lower[i]) > 3:
                     phrase_actor = i
-            i += 1
+                    phrase_actors[i] = i
+            if i < len(lower) -1 :
+                i +=1
+                continue
+            if '#' in path:
+                option = 7
+
+
+
+
+        elif i == len(lower) - 1 and not pathleft[-1][2] == 0:
+            if VPMPrint:
+                print("retracing ", len(pathleft))
+            p = pathleft.pop()
+            path = p[0]
+            i = p[1] + 1
+            option = p[2]
+            matchlist.pop()
+            phrase_actors[i] = phrase_actors.setdefault(i,phrase_actor)
             continue
+
+
+
+
+        phrase_actors[i] = phrase_actors.setdefault(i,phrase_actor)
 
         # check direct word match
         if lower[i] in path and not option > 0:
@@ -1706,6 +1654,8 @@ def verb_pattern_match(patlist, upper, lower):
         elif 'synsets' in path and not option > 1:
             #print("could be a synset")
             matchflag = False
+            if VPMPrint:
+                print("Checking for synset")
             for set in path['synsets'].keys():
                 if lower[i] in PETRglobals.VerbDict['verbs'][set]:
                     if VPMPrint:
@@ -1723,7 +1673,7 @@ def verb_pattern_match(patlist, upper, lower):
         elif in_NE and (not option > 2) and '+' in path:
 
             pathleft.append((path, i, 3, target))
-            target = [phrase_actor, False]
+            target = [phrase_actors[i], False]
             path = path['+']
             matchlist += [target]
             if VPMPrint:
@@ -1733,7 +1683,7 @@ def verb_pattern_match(patlist, upper, lower):
         elif in_NE and (not option > 3) and '$' in path:
 
             pathleft.append((path, i, 4, source))
-            source = [phrase_actor, False]
+            source = [phrase_actors[i], False]
             path = path['$']
             matchlist.append(source)
             if VPMPrint:
@@ -1780,6 +1730,8 @@ def verb_pattern_match(patlist, upper, lower):
             continue
 
         elif i + 1 < len(lower) and not option > 6:
+            if VPMPrint:
+                print("skipping")
             option = 0
             pathleft.append((path, i, 7))
             i += 1
@@ -1833,7 +1785,6 @@ def verb_pattern_match(patlist, upper, lower):
 
         i += 1
         option = 0
-
     return {}, "", ""
 
 
@@ -1975,34 +1926,30 @@ def check_NEphrase(nephrase, date):
     actorcode = ""
     actor_index = [-1, -1]
     if ShowNEParsing:
-        print("CNEPh initial phrase", nephrase)  # debug
+        print("CNEPh initial phrase", nephrase)
     # iterate through the phrase looking for actors
     while kword < len(nephrase):
         phrasefrag = nephrase[kword:]
         if ShowNEParsing:
-            print("CNEPh Actor Check", phrasefrag[0])  # debug
-        # check whether patterns starting with this word exist in the
-        # dictionary
+            print("CNEPh Actor Check", phrasefrag[0])
         if phrasefrag[0] in PETRglobals.ActorDict:
             if ShowNEParsing:
-                print("                Found", phrasefrag[0])  # debug
+                print("                Found", phrasefrag[0])
             patlist = PETRglobals.ActorDict[nephrase[kword]]
             if ShowNEParsing:
                  print("CNEPh Mk1:", patlist)
-            # iterate over the patterns beginning with this word
             actor_index = (kword, kword)
             for index in range(len(patlist)):
 
                 val, phraselen = actor_phrase_match(patlist[index], phrasefrag)
                 if val:
-                    # found a coded actor
                     actor_index = (kword, kword + phraselen)
                     actorcode = get_actor_code(patlist[index][0], date)
                     if ShowNEParsing:
                         print("CNEPh Mk2:", actorcode)
                     break
         if len(actorcode) > 0:
-            break   # stop after finding first actor
+            break
         else:
             kword += 1
 
@@ -2015,30 +1962,27 @@ def check_NEphrase(nephrase, date):
             continue
         phrasefrag = nephrase[kword:]
         if ShowNEParsing:
-            print("CNEPh Agent Check", phrasefrag[0])  # debug
-        # check whether patterns starting with this word exist in the
-        # dictionary
+            print("CNEPh Agent Check", phrasefrag[0])
 
         if phrasefrag[0] in PETRglobals.AgentDict:
             if ShowNEParsing:
-                print("                Found", phrasefrag[0])  # debug
+                print("                Found", phrasefrag[0])
             patlist = PETRglobals.AgentDict[nephrase[kword]]
-            # iterate over the patterns beginning with this word
             for index in range(len(patlist)):
 
                 val = actor_phrase_match(patlist[index], phrasefrag)
 
                 if val[0]:
-                    agentlist.append(patlist[index][0])   # found a coded actor
+                    agentlist.append(patlist[index][0])
                     kword += val[1] - 1
                     break
         kword += 1   # continue looking for more agents
 
     if len(agentlist) == 0:
         if len(actorcode) == 0:
-            return [False]  # no actor or agent
+            return [False]
         else:
-            return [True, actorcode]  # actor only
+            return [True, actorcode]
 
     if len(actorcode) == 0:
         actorcode = '---'   # unassigned agent
@@ -2117,34 +2061,6 @@ def check_commas(plist):
             ka -= 1
         return ka - 1
 
-    def delete_phrases(loclow, lochigh, list):
-        """
-        Deletes the complete phrases in ParseList between loclow and lochigh - 1, leaving
-        other mark-up.
-
-        This is the workhorse for this function only removes (xx...~xx delimited phrases
-        when these are completely within the clause being removed. This will potentially
-        leave the tree in something of a mess grammatically, but it will be balanced.
-
-        [Since you are wondering, we go through this in reverse in order to use index(),
-        as there is no rindex() for lists.]
-        """
-        ParseList = list
-        stack = []  # of course we use a stack...this is a tree...
-        ka = lochigh - 1
-        while ka >= loclow:
-            if ParseList[ka][0] == '~':
-                stack.append(ParseList[ka][1:])
-            # remove this complete phrase
-            elif len(stack) > 0 and ParseList[ka][0] == '(' and ParseList[ka][1:] == stack[-1]:
-                targ = '~' + ParseList[ka][1:]
-                ParseList = ParseList[:ka] + \
-                    ParseList[ParseList.index(targ, ka + 1) + 1:]
-                stack.pop()
-            ka -= 1
-
-        return ParseList
-
     logger = logging.getLogger('petr_log')
     # displays trees at various points as ParseList is mangled
     ShowCCtrees = True
@@ -2219,8 +2135,6 @@ def check_commas(plist):
                 ####################
 
 
-# ParseList = ParseList[:ka + 3] + ParseList[kend:]  # leave the comma in
-# place so an internal can catch it
 
         if ShowCCtrees:
             print('chkcomma-2a-Parselist::')
@@ -2253,7 +2167,7 @@ def check_commas(plist):
                             ParseList[ParseList.index(targ, ka + 1) + 1:]
                         stack.pop()
                     ka -= 1
-            ###############
+                ###############
 
             ka = kb
 
@@ -2345,10 +2259,8 @@ def assign_NEcodes(plist, ParseStart, date):
 
         ncstart = ParseList.index('(NEC', kstart, kend)
         ncend = ParseList.index('~NEC', ncstart, kend)
-        # first element is always '---'
         prelist = ParseList[kstart + 1:ncstart - 1]
         postlist = ParseList[ncend + 1:kend]
-    # --',postlist
         newlist = ['(NEC']
         ka = ncstart + 1
 
@@ -2367,7 +2279,6 @@ def assign_NEcodes(plist, ParseStart, date):
             ka += 1  # okay to increment since next item is (, or (CC
 
         newlist.append('~NEC')
-        # insert a tell-tale here in case we need to further expand this
         newlist.append('~TLTL')
         ParseList = ParseList[:kstart] + newlist + ParseList[kend + 1:]
 
@@ -2394,10 +2305,6 @@ def assign_NEcodes(plist, ParseStart, date):
                     'Bounds overflow in (NE search in assign_NEcodes')
 
             while '~NE' != ParseList[kitem]:
-                # <14.01.15> At present, read_TreeBank can leave (NNx in place
-                # in situations involving (PP and (NEC: so COMPOUND-07. This is
-                # a mildly kludgy workaround that insures a check_NEphrase gets
-                # clean input
                 if ParseList[kitem][1:3] != 'NN':
                     nephrase.append(ParseList[kitem])
                 kitem += 1
@@ -2510,9 +2417,6 @@ def make_event_strings(
                     kb -= 1
 
     logger = logging.getLogger('petr_log')
-# p.a.s. 15.05.25: get_loccodes was generating the error "need string or buffer, tuple found" on some records that had been
-# converted from the Levant Reuters series; which also occurred around line 1315 on a different record. For the time being,
-# just trap and log it.
     try:
         srccodes = get_loccodes(SourceLoc, CodedEvents, UpperSeq, LowerSeq)
         expand_compound_codes(srccodes)
@@ -2533,7 +2437,6 @@ def make_event_strings(
     if ':' in EventCode:  # symmetric event
         if srccodes[0] == '---' or tarcodes[0] == '---':
             if tarcodes[0] == '---':
-                # <13.12.08> Is this behavior defined explicitly in the manual???
                 tarcodes = srccodes
             else:
                 srccodes = tarcodes
@@ -2542,7 +2445,6 @@ def make_event_strings(
         CodedEvents = make_events(tarcodes, srccodes, ecodes[2], CodedEvents)
     else:
         CodedEvents = make_events(srccodes, tarcodes, EventCode, CodedEvents)
-    # remove null coded cases
     if PETRglobals.RequireDyad:
         ka = 0
         # need to evaluate the bound every time through the loop
@@ -2595,7 +2497,6 @@ def check_discards(SentenceText):
         elif '$' in level:
             return [1, ' ' + discardPhrase]
         elif sent[i] in level:
-            # print(sent[i],SentenceText.upper(),level[sent[i]])
             depart_index.append(i)
             level = level[sent[i]]
             discardPhrase += " " + sent[i]
@@ -2666,7 +2567,7 @@ def code_record(plist1, pstart, date):
     try:
     # this can throw HasParseError which is caught in do_coding
         CodedEvents, SourceLoc = check_verbs(plist, pstart, CodedEvents)
-    except IndexError:  # <14.09.04: HasParseError should get all of these now
+    except IndexError:
         logger.warning('\tIndexError in parsing, but HasParseError should have caught this. Probably a bad sentence.')
     
     NEmpty = 0
@@ -2715,17 +2616,18 @@ def do_coding(event_dict, out_file):
                         change_Config_Options(config)
 
                 SentenceID = '{}_{}'.format(key, sent)
-
+                #if not SentenceID == "NEST_2.75":
+                #    continue
+                coded_events = []
                 logger.info('\tProcessing {}'.format(SentenceID))
                 SentenceText = event_dict[key]['sents'][sent]['content']
                 SentenceDate = event_dict[key]['meta']['date']
                 Date = PETRreader.dstr_to_ordate(SentenceDate)
                 SentenceSource = 'TEMP'
-
                 parsed = event_dict[key]['sents'][sent]['parsed']
                 
                 treestr = utilities._format_parsed_str(parsed)
-                
+            
                 disc = check_discards(SentenceText)
 
                 if disc[0] > 0:
@@ -2765,15 +2667,16 @@ def do_coding(event_dict, out_file):
                         sys.exit()
 
                 prev_code = coded_events
-
+                print("\n\n",SentenceID,"\n",SentenceText,"\n\t",coded_events)
             else:
+                print("NO INFO")
                 logger.info(
                     '{} has no parse information. Passing.'.format(SentenceID))
                 pass
 
         if SkipStory:
             event_dict[key]['sents'] = None
-
+        
 
     print("Summary:")
     print(
@@ -2790,6 +2693,7 @@ def do_coding(event_dict, out_file):
         NDiscardStory,
         "  Sentences without events:",
         NEmpty)
+
 
     return event_dict
 
@@ -2846,11 +2750,16 @@ PETRARCH
     return args
 
 
+
+
+def start_logger():
+    utilities.init_logger('PETRARCH.log')
+
 def main():
 
     cli_args = parse_cli_args()
-    utilities.init_logger('PETRARCH.log')
-    logger = logging.getLogger('petr_log')
+    start_logger()
+    logger = logger = logging.getLogger('petr_log')
 
     PETRglobals.RunTimeString = time.asctime()
 
@@ -2929,7 +2838,6 @@ def read_dictionaries(validation=False):
         PETRglobals.VerbFileName)
 
     PETRreader.read_verb_dictionary(verb_path)
-    # PETRreader.show_verb_dictionary('Verbs_output.txt')
 
     print('Actor dictionaries:', PETRglobals.ActorFileList)
     for actdict in PETRglobals.ActorFileList:
