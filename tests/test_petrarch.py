@@ -50,7 +50,6 @@ def test_simple2():
     assert return_dict['test123']['sents']['0']['events'] == [['DEU','FRA','173']]
 
 
-
 def test_complex1():
 
     text = "A Tunisian court has jailed a Nigerian student for two years for helping young militants join an armed Islamic group in Lebanon, his lawyer said Wednesday."
@@ -83,6 +82,39 @@ def test_complex1():
     assert return_dict['test123']['sents']['0']['events'] == [['TUNJUD','NGAEDU','173']]
 
 
+def test_nested():
+
+    # In PETRARCH 0.4.0 this event should only code "US claimed that ISIL."
+    # Nested sentences are intentionally not coded, but this can be changed if needed.
+    #       (this would be changed at the end of check_verbs where the index is reevaluated)
+    
+    
+    text = "The US claimed that ISIL had attacked Iraq and taken the city of Mosul"
+
+    parse = """(ROOT (S (NP (DT The) (NNP US)) (VP (VBD claimed) (SBAR (IN that) (S (NP (NNP ISIL)) (VP (VBD had) (VP (VP (VBN attacked) (NP (NNP Iraq))) (CC and) (VP (VBN taken) (NP (NP (DT the) (NN city)) (PP (IN of) (NP (NNP Mosul))))))))))))"""
+
+    parsed = utilities._format_parsed_str(parse)
+
+    dict = {u'test123': {u'sents': {u'0': {u'content': text, u'parsed': parse}},
+                u'meta': {u'date': u'20150101'}}}
+
+    return_dict = petrarch.do_coding(dict,None)
+    assert return_dict['test123']['sents']['0']['events'] == [['USA','IMGMUSISI','112']]
+
+
+def test_actor_order():
+
+    text = "US troops from Syria have just invaded Northern Iraq"
+
+    parse = """(ROOT (S (NP (NP (NNP US) (NNS troops)) (PP (IN from) (NP (NNP Syria)))) (VP (VBP have) (ADVP (RB just)) (VP (VBN invaded) (NP (JJ Northern) (NNP Iraq))))))"""
+
+    parsed = utilities._format_parsed_str(parse)
+
+    dict = {u'test123': {u'sents': {u'0': {u'content': text, u'parsed': parse}},
+                u'meta': {u'date': u'20150101'}}}
+
+    return_dict = petrarch.do_coding(dict,None)
+    assert return_dict['test123']['sents']['0']['events'] == [['USAMIL','IRQ','192']]
 
 
 #########################################
