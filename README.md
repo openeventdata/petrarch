@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/openeventdata/petrarch.svg?branch=master)](https://travis-ci.org/openeventdata/petrarch)
+
 PETRARCH
 ========
 
@@ -12,19 +14,9 @@ For more information, please visit the (work-in-progress)
 
 ##Installing
 
-It is now possible to install the program. It is highly recommended that you
-install within a virtual environment. This is alpha software, so things will
-change moving forward. Seriously, install in a virtual environment.
+Installing the program is as simple as:
 
-To install (you're in a virtual environment, right?):
-
-1) Clone the repo
-
-  - For example, download the zip file into ``~/Downloads``.
-  - This will put the repo into something like ``~/Downloads/petrarch``.
-
-2) Run ``pip install -e ~/Downloads/petrarch``
-
+`pip install git+https://github.com/openeventdata/petrarch.git`
 
 This will install the program with a command-line hook. You can now run the program using:
 
@@ -47,6 +39,17 @@ The program is stable enough that it is useable, and it is not *that* likely tha
 will be large changes in the API. 
 
 ##Running
+
+###But first, a note.
+
+It is possible to run PETRARCH as a stand-alone program. Most of our
+development work has gone into incorporating PETRARCH into a full pipeline of
+utilities, though, e.g., the [Phoenix pipeline](https://github.com/openeventdata/phoenix_pipeline).
+There's also a RESTful wrapper around PETRARCH and CoreNLP named
+[hypnos](https://github.com/caerusassociates/hypnos). It's probably worthwhile
+to explore those options before trying to use PETRARCH as a stand-alone.
+
+###With that out of the way...
 
 Currently, you can run PETRARCH using the following command if installed:
 
@@ -84,6 +87,10 @@ The final record should read
     Events correctly coded in FINAL-RECORD
     Exiting: <Stop> record 
 
+There's also a check of the basic functionalities of PETRARCH available using
+`pytest`. If you have `pytest` installed simply run `py.test` in the top-level
+directory.
+
 ##Compatibilities with TABARI dictionaries
 
 PETRARCH has a much richer dictionary syntax than TABARI, and because PETRARCH uses 
@@ -91,4 +98,3 @@ parsed input, many dictionary entries used by TABARI for noun-verb disambiguatio
 no longer needed. While the initial versions of the program could use existing TABARI 
 dictionaries, PETRARCH-formatted dictionaries are now required: these are available in 
 this repository and in https://github.com/openeventdata/Dictionaries.
-
