@@ -1281,6 +1281,9 @@ def check_verbs(ParseList, ParseStart, CodedEv):
  
                             if '#' in patternlist:
                                 verbdata = patternlist['#']['#']
+                            else:
+                                # No match found on the verb.
+                                raise_CheckVerbs_error()
                             break
 
                 if not hasmatch:
@@ -2567,7 +2570,7 @@ def code_record(plist1, pstart, date):
     try:
     # this can throw HasParseError which is caught in do_coding
         CodedEvents, SourceLoc = check_verbs(plist, pstart, CodedEvents)
-    except IndexError:
+    except Exception as e:
         logger.warning('\tIndexError in parsing, but HasParseError should have caught this. Probably a bad sentence.')
     
     NEmpty = 0
