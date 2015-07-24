@@ -2670,7 +2670,7 @@ def do_coding(event_dict, out_file):
                         sys.exit()
 
                 prev_code = coded_events
-                print("\n\n",SentenceID,"\n",SentenceText,"\n\t",coded_events)
+                #print("\n\n",SentenceID,"\n",SentenceText,"\n\t",coded_events)
             else:
                 print("NO INFO")
                 logger.info(
