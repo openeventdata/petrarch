@@ -2711,23 +2711,35 @@ PETRARCH
                                      description=__description__)
 
     sub_parse = aparse.add_subparsers(dest='command_name')
-    parse_command = sub_parse.add_parser('parse', help="""Command to run the
-                                         PETRARCH parser.""",
-                                         description="""Command to run the
-                                         PETRARCH parser.""")
-    parse_command.add_argument('-i', '--inputs',
-                               help='File, or directory of files, to parse.',
-                               required=True)
-    parse_command.add_argument('-P', '--parsed', action='store_true',
-                               default=False, help="""Whether the input
-                               document contains StanfordNLP-parsed text.""")
-    parse_command.add_argument('-o', '--output',
-                               help='File to write parsed events.',
-                               required=True)
-    parse_command.add_argument('-c', '--config',
-                               help="""Filepath for the PETRARCH configuration
-                               file. Defaults to PETR_config.ini""",
-                               required=False)
+
+
+    #
+    #   This has been commented out because for a lot of people the Stanford functionality
+    #   doesn't work. If it has worked for you, then simply uncomment this and it
+    #   will be back to normal
+
+
+    #parse_command = sub_parse.add_parser('parse', help="""Command to run the
+    #                                    PETRARCH parser. """,
+    #                                     description="""Command to run the
+    #                                     PETRARCH parser.""")
+    
+    #parse_command.add_argument('-i', '--inputs',
+    #                           help='File, or directory of files, to parse.',
+    #                           required=True)
+    
+    #parse_command.add_argument('-P', '--parsed', action='store_true',
+    #                           default=False, help="""Whether the input
+    #                           document contains StanfordNLP-parsed text.""")
+    
+    #parse_command.add_argument('-o', '--output',
+    #                           help='File to write parsed events.',
+    #                           required=True)
+    
+    #parse_command.add_argument('-c', '--config',
+    #                          help="""Filepath for the PETRARCH configuration
+    #                           file. Defaults to PETR_config.ini""",
+    #                           required=False)
 
     unittest_command = sub_parse.add_parser('validate', help="""Command to run
                                          the PETRARCH validation suite.""",
@@ -2745,6 +2757,12 @@ PETRARCH
                                          description="""Command to run a batch
                                          process from parsed files specified by
                                          an optional config file.""")
+    
+    batch_command.add_argument('-i', '--inputs',
+                               help='File, or directory of files, to parse.',
+                               required=False)
+    
+
     batch_command.add_argument('-c', '--config',
                                help="""Filepath for the PETRARCH configuration
                                file. Defaults to PETR_config.ini""",
@@ -2765,6 +2783,7 @@ def main():
     logger = logger = logging.getLogger('petr_log')
 
     PETRglobals.RunTimeString = time.asctime()
+    
 
     if cli_args.command_name == 'validate':
         PETRreader.parse_Config(utilities._get_data('data/config/',
@@ -2777,7 +2796,8 @@ def main():
         else:
             do_validation(cli_args.inputs)
 
-    if cli_args.command_name == 'parse' or cli_args.command_name == 'batch':
+
+    if cli_args.command_name == 'batch' or cli_args.command_name == 'parse':
 
         if cli_args.config:
             print('Using user-specified config: {}'.format(cli_args.config))
@@ -2792,26 +2812,24 @@ def main():
         read_dictionaries()
         start_time = time.time()
         print('\n\n')
+        paths = PETRglobals.TextFileList
 
-        if cli_args.command_name == 'parse':
-            if os.path.isdir(cli_args.inputs):
-                if cli_args.inputs[-1] != '/':
-                    paths = glob.glob(cli_args.inputs + '/*.xml')
-                else:
-                    paths = glob.glob(cli_args.inputs + '*.xml')
-            elif os.path.isfile(cli_args.inputs):
-                paths = [cli_args.inputs]
+        if os.path.isdir(cli_args.inputs):
+            if cli_args.inputs[-1] != '/':
+                paths = glob.glob(cli_args.inputs + '/*.xml')
             else:
-                print(
-                    '\nFatal runtime error:\n"' +
-                    cli_args.inputs +
-                    '" could not be located\nPlease enter a valid directory or file of source texts.')
-                sys.exit()
-
-            run(paths, cli_args.output, cli_args.parsed)
-
+                paths = glob.glob(cli_args.inputs + '*.xml')
+        elif os.path.isfile(cli_args.inputs):
+            paths = [cli_args.inputs]
         else:
-            run(PETRglobals.TextFileList, PETRglobals.EventFileName, True)
+            print(
+                '\nFatal runtime error:\n"' +
+                cli_args.inputs +
+                '" could not be located\nPlease enter a valid directory or file of source texts.')
+            sys.exit()
+
+        run(paths, PETRglobals.EventFileName, True)
+
 
         print("Coding time:", time.time() - start_time)
 

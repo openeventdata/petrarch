@@ -26,18 +26,6 @@ You can get more information using:
 
 ``petrarch -h``
 
-**StanfordNLP:**
-
-If you plan on using StanfordNLP for parsing within the program you will also
-need to download that program. PETRARCH uses StanfordNLP 3.2.0, which can be
-obtained from
-[Stanford](http://www-nlp.stanford.edu/software/stanford-corenlp-full-2013-06-20.zip). 
-PETRARCH's default configuration file assumes that this is unzipped and located
-in the user's home directory in a directory named ``stanford-corenlp/``, e.g., ``~/stanford-corenlp``.
-
-The program is stable enough that it is useable, and it is not *that* likely that there 
-will be large changes in the API. 
-
 ##Running
 
 ###But first, a note.
@@ -53,11 +41,11 @@ to explore those options before trying to use PETRARCH as a stand-alone.
 
 Currently, you can run PETRARCH using the following command if installed:
 
-``petrarch parse -i <INPUT FILE> -o <OUTPUT FILE>``
+``petrarch batch -i <INPUT FILE> ``
 
 If not installed:
 
-``python petrarch.py parse -i data/text/GigaWord.sample.PETR.xml -o test_output.txt``
+``python petrarch.py batch -i data/text/GigaWord.sample.PETR.xml``
 
 There's also the option to specify a configuration file using the ``-c <CONFIG
 FILE>`` flag, but the program will default to using ``PETR_config.ini``.
