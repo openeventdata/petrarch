@@ -2711,10 +2711,12 @@ PETRARCH
                                      description=__description__)
 
     sub_parse = aparse.add_subparsers(dest='command_name')
-    parse_command = sub_parse.add_parser('parse', help="""Command to run the
-                                         PETRARCH parser.""",
-                                         description="""Command to run the
-                                         PETRARCH parser.""")
+    parse_command = sub_parse.add_parser('parse', help=""" DEPRACATED Command to run the
+                                         PETRARCH parser. Do not use unless you've used it before. If you need to 
+                                         process unparsed text, see the README""",
+                                         description="""DEPRACATED Command to run the
+                                         PETRARCH parser. Do not use unless you've used it before.If you need to 
+                                         process unparsed text, see the README""")
     parse_command.add_argument('-i', '--inputs',
                                help='File, or directory of files, to parse.',
                                required=True)
@@ -2728,17 +2730,8 @@ PETRARCH
                                help="""Filepath for the PETRARCH configuration
                                file. Defaults to PETR_config.ini""",
                                required=False)
-
-    unittest_command = sub_parse.add_parser('validate', help="""Command to run
-                                         the PETRARCH validation suite.""",
-                                            description="""Command to run the
-                                         PETRARCH validation suite.""")
-    unittest_command.add_argument('-i', '--inputs',
-                                  help="""Optional file that contains the
-                               validation records. If not specified, defaults
-                               to the built-in PETR.UnitTest.records.txt""",
-                                  required=False)
-
+    
+    
     batch_command = sub_parse.add_parser('batch', help="""Command to run a batch
                                          process from parsed files specified by
                                          an optional config file.""",
@@ -2749,33 +2742,24 @@ PETRARCH
                                help="""Filepath for the PETRARCH configuration
                                file. Defaults to PETR_config.ini""",
                                required=False)
+                               
+    batch_command.add_argument('-i', '--inputs',
+                               help="""Filepath for the input XML file. Defaults to 
+                               data/text/Gigaword.sample.PETR.xml""",
+                               required=False)
+
     args = aparse.parse_args()
     return args
 
 
-
-
-def start_logger():
-    utilities.init_logger('PETRARCH.log')
-
 def main():
 
     cli_args = parse_cli_args()
-    start_logger()
-    logger = logger = logging.getLogger('petr_log')
+    utilities.init_logger('PETRARCH.log')
+    logger = logging.getLogger('petr_log')
 
     PETRglobals.RunTimeString = time.asctime()
 
-    if cli_args.command_name == 'validate':
-        PETRreader.parse_Config(utilities._get_data('data/config/',
-                                                    'PETR_config.ini'))
-        read_dictionaries()
-        if not cli_args.inputs:
-            validation_file = utilities._get_data('data/text',
-                                                  'PETR.UnitTest.records.xml')
-            do_validation(validation_file)
-        else:
-            do_validation(cli_args.inputs)
 
     if cli_args.command_name == 'parse' or cli_args.command_name == 'batch':
 
@@ -2793,7 +2777,8 @@ def main():
         start_time = time.time()
         print('\n\n')
 
-        if cli_args.command_name == 'parse':
+        paths = PETRglobals.TextFileList
+        if cli_args.inputs or cli_args.command_name == 'parse':
             if os.path.isdir(cli_args.inputs):
                 if cli_args.inputs[-1] != '/':
                     paths = glob.glob(cli_args.inputs + '/*.xml')
@@ -2801,21 +2786,29 @@ def main():
                     paths = glob.glob(cli_args.inputs + '*.xml')
             elif os.path.isfile(cli_args.inputs):
                 paths = [cli_args.inputs]
-            else:
+            elif cli_args.command_name == 'parse':
                 print(
                     '\nFatal runtime error:\n"' +
                     cli_args.inputs +
                     '" could not be located\nPlease enter a valid directory or file of source texts.')
                 sys.exit()
-
+             
+             
+        if cli_args.command_name == 'parse':
             run(paths, cli_args.output, cli_args.parsed)
 
         else:
-            run(PETRglobals.TextFileList, PETRglobals.EventFileName, True)
+            run(paths, PETRglobals.EventFileName, True)
 
         print("Coding time:", time.time() - start_time)
 
     print("Finished")
+
+
+
+
+def start_logger():
+    utilities.init_logger('PETRARCH.log')
 
 
 def read_dictionaries(validation=False):
