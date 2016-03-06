@@ -3,6 +3,8 @@
 PETRARCH
 ========
 
+[![Join the chat at https://gitter.im/openeventdata/petrarch](https://badges.gitter.im/openeventdata/petrarch.svg)](https://gitter.im/openeventdata/petrarch?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Code for the new Python Engine for Text Resolution And Related Coding Hierarchy (PETRARCH) 
 event data coder. The coder now has all of the functions from the older TABARI coder 
 and the new CAMEO.verbpatterns.140609.txt dictionary incorporates both parser-based matching 
