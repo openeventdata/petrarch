@@ -14,6 +14,8 @@ without crashing, using the included dictionaries.
 For more information, please visit the (work-in-progress)
 [documentation](http://petrarch.readthedocs.org/en/latest/#).
 
+**Note <PAS 21-July-2017>:** The most recent version here went through quite a few modifications -- for example eliminating most of the debugging and all of the unit-test/validation code -- prior to eventually being transitioned to the essentially entirely new program PETRARCH-2. Consequently if for some reason you wish to return to "PETRARCH-Classic", you might want to either go back to circa version 76ccdbffddbcb10bfa5bf4491bcdee2301f3e24e, or just get the stable version at https://github.com/philip-schrodt/petrarch, which does include a 284-record validation suite. Most of our development, however, has shifted to https://github.com/openeventdata/UniversalPetrarch, which uses a universal dependency parse rather than a constituency parse, and that code is likely a more useful base than the PETRARCH code.
+
 ##Installing
 
 Installing the program is as simple as:
